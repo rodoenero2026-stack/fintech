@@ -1,0 +1,31 @@
+# Dependencias (Ignora node_modules en cualquier subcarpeta)
+**/node_modules/
+node_modules/
+
+# Producción
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor (VS Code, JetBrains)
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+
+# Variables de entorno (¡MUY IMPORTANTE!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Archivos de SO
+Thumbs.db
