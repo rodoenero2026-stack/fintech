@@ -9,28 +9,25 @@ import {
 export default function UserDashboard() {
   const [prestamo, setPrestamo] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false); 
-  const [showUserMenu, setShowUserMenu] = useState(false); // Estado para el menú de cerrar sesión
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
 
-  // Función de carga única para evitar repetición de lógica
   const cargarInformacion = () => {
     const datos = obtenerDatosUsuario();
     setPrestamo(datos);
   };
 
   useEffect(() => {
-    // Seguridad: Si no hay usuario en localStorage, mandar al login
-    const user = localStorage.getItem('usuario');
+    // CORREGIDO: usar 'token' en lugar de 'usuario'
+    const user = localStorage.getItem('token');
     if (!user) {
       navigate('/login');
+      return;
     }
 
     cargarInformacion();
     
-    // Escucha cambios de otras pestañas (como el Admin)
     window.addEventListener('storage', cargarInformacion);
-    
-    // Intervalo de seguridad para asegurar sincronización local
     const interval = setInterval(cargarInformacion, 1000);
 
     return () => {
@@ -39,13 +36,11 @@ export default function UserDashboard() {
     };
   }, [navigate]);
 
-  // --- LÓGICA DE CERRAR SESIÓN ---
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
   };
 
-  // --- LÓGICA DE CÁLCULO SEGURO ---
   const montoBase = Number(prestamo?.montoSolicitado || 0);
   const meses = Number(prestamo?.meses || 1);
   const montoPagado = Number(prestamo?.montoPagado || 0);
@@ -61,8 +56,8 @@ export default function UserDashboard() {
   const restante = totalConInteres - montoPagado;
   const porcentajeProgreso = totalConInteres > 0 ? Math.min((montoPagado / totalConInteres) * 100, 100) : 0;
 
-  // --- SUB-COMPONENTES PARA ORDENAR EL RENDER ---
-  
+  const userName = localStorage.getItem('userName') || 'Usuario';
+
   const RenderHistorial = () => {
     const movimientos = prestamo?.historial || [];
     if (movimientos.length === 0) return null;
@@ -103,16 +98,15 @@ export default function UserDashboard() {
       <header style={styles.header}>
         <div>
           <h1 style={styles.brand}>FintechNova</h1>
-          <p style={styles.welcome}>Panel de Control Financiero</p>
+          <p style={styles.welcome}>Bienvenido, {userName}</p>
         </div>
         
-        {/* AVATAR CON MENÚ DE CIERRE DE SESIÓN */}
         <div style={{ position: 'relative' }}>
           <div 
             style={styles.avatar} 
             onClick={() => setShowUserMenu(!showUserMenu)}
           >
-            JF
+            {userName.charAt(0).toUpperCase()}
           </div>
           
           {showUserMenu && (
@@ -125,13 +119,12 @@ export default function UserDashboard() {
         </div>
       </header>
 
-      {/* ESTADO 1: SIN PRÉSTAMO ACTIVO O RECIÉN LIQUIDADO */}
       {(!prestamo || prestamo.statusSolicitud === 'ninguna' || restante <= 0) && (
         <div style={styles.emptyState}>
           <div style={styles.illustrationCircle}>
             <PlusCircle size={40} color="#2563eb" />
           </div>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '10px' }}>¡Bienvenido!</h2>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '10px' }}>¡Bienvenido, {userName}!</h2>
           <p style={{ marginBottom: '25px', color: '#64748b' }}>No tienes préstamos pendientes en este momento.</p>
           <button onClick={() => navigate('/solicitar')} style={styles.ctaButton}>
             Solicitar un nuevo préstamo <ArrowRight size={18} />
@@ -139,7 +132,6 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* ESTADO 2: SOLICITUD EN REVISIÓN */}
       {prestamo?.statusSolicitud === 'pendiente' && (
         <>
           <div style={{ ...styles.statusAlert, background: '#eff6ff', color: '#1e40af' }}>
@@ -149,12 +141,11 @@ export default function UserDashboard() {
           <div style={styles.emptyState}>
             <div style={styles.illustrationCircle}><Clock size={48} color="#2563eb" /></div>
             <h3>Analizando tu perfil</h3>
-            <p>Hola <strong>Joan Francisco</strong>, tu solicitud de <strong>${montoBase.toLocaleString()}</strong> está en proceso.</p>
+            <p>Hola <strong>{userName}</strong>, tu solicitud de <strong>${montoBase.toLocaleString()}</strong> está en proceso.</p>
           </div>
         </>
       )}
 
-      {/* ESTADO 3: PRÉSTAMO ACTIVO */}
       {prestamo?.statusSolicitud === 'aprobado' && restante > 0 && (
         <>
           <div style={styles.alertWarning}>
@@ -192,7 +183,6 @@ export default function UserDashboard() {
 
       <RenderHistorial />
 
-      {/* MODAL CALENDARIO */}
       {showCalendar && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
@@ -222,7 +212,6 @@ export default function UserDashboard() {
   );
 }
 
-// Estilos actualizados
 const styles = {
   container: { maxWidth: '1000px', margin: '0 auto', padding: '20px', fontFamily: 'Inter, system-ui, sans-serif', color: '#1e293b' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
@@ -230,7 +219,7 @@ const styles = {
   welcome: { margin: 0, color: '#64748b', fontSize: '0.9rem' },
   avatar: { width: '40px', height: '40px', background: '#2563eb', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', cursor: 'pointer' },
   userMenu: { position: 'absolute', top: '50px', right: '0', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '8px', zIndex: 100, width: '150px' },
-  logoutBtn: { width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontWeight: '600', borderRadius: '8px', transition: 'background 0.2s' },
+  logoutBtn: { width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontWeight: '600', borderRadius: '8px' },
   statusAlert: { display: 'flex', alignItems: 'center', gap: '15px', padding: '20px', borderRadius: '16px', marginBottom: '20px', fontSize: '0.95rem' },
   alertWarning: { display: 'flex', alignItems: 'center', gap: '15px', background: '#fff7ed', color: '#9a3412', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px', marginBottom: '20px' },
   mainGrid: { display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '20px', marginBottom: '30px' },

@@ -20,29 +20,30 @@ const Registro = () => {
     alert("❌ Las contraseñas no coinciden.");
     return;
   }
-
+////////
   try {
-    const respuesta = await fetch('http://localhost:3001/registro', {
+    // CORRECCIÓN 1: Apuntamos a tu URL de Render oficial
+    const respuesta = await fetch('https://fintechnova-api.onrender.com/api/registro', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      // CORRECCIÓN 2: Traducimos los campos al formato de tu base de datos (nombre y email)
       body: JSON.stringify({
-        nombres: formData.nombres,
-        apellidos: formData.apellidos,
-        correo: formData.correo,
+        nombre: formData.nombres + " " + formData.apellidos,
+        email: formData.correo,
         password: formData.password
       })
     });
 
-    const data = await respuesta.json();
-
     if (respuesta.ok) {
-      alert("✅ " + data.message);
-      // Redirigir al login
+      alert("✅ ¡Cuenta creada exitosamente en FintechNova!");
+      window.location.href = '/'; // Redirige automáticamente al Login
     } else {
-      alert("⚠️ " + data.message); // Aquí mostrará "El correo ya está registrado"
+      // Leemos el texto del error que mande C# por si el correo ya existe
+      const errorData = await respuesta.text();
+      alert("⚠️ No se pudo registrar: " + errorData); 
     }
   } catch (error) {
-    alert("❌ Error al conectar con el servidor");
+    alert("❌ Error al conectar con el servidor en Render");
   }
 };
 
@@ -58,3 +59,5 @@ const Registro = () => {
     </form>
   );
 };
+
+export default Registro;

@@ -10,16 +10,24 @@ const Registro = () => {
     password: ''
   });
   const navigate = useNavigate();
-
+/////////
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Enviamos los datos a tu servidor Node.js
-      await axios.post('http://localhost:3001/registro', formData);
+      // CORRECCIÓN 1: Adaptamos los datos para que coincidan EXACTAMENTE con lo que espera tu C# (Swagger)
+      const payloadParaCSharp = {
+        nombre: formData.nombres + " " + formData.apellidos, // Unimos nombre y apellido en una sola variable
+        email: formData.correo, // Tu backend espera 'email', no 'correo'
+        password: formData.password
+      };
+
+      // CORRECCIÓN 2: Apuntamos a tu API oficial en Render
+      await axios.post('https://fintechnova-api.onrender.com/api/registro', payloadParaCSharp);
+      
       alert("¡Cuenta creada con éxito! Ahora puedes iniciar sesión.");
       navigate('/'); // Redirige al Login
     } catch (error) {
-      alert(error.response?.data || "Error al registrarse. Verifica si el correo ya existe.");
+      alert(error.response?.data?.message || "Error al registrarse. Verifica si el servidor está activo.");
     }
   };
 
@@ -40,8 +48,8 @@ const Registro = () => {
   );
 };
 
-// Estilos rápidos
-const inputStyle = { width: '100%', padding: '10px', margin: '10px 0', borderRadius: '6px', border: '1px solid #cbd5e1' };
+// Estilos rápidos (Agregué boxSizing para que los inputs no se salgan del cuadro)
+const inputStyle = { width: '100%', padding: '10px', margin: '10px 0', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' };
 const buttonStyle = { width: '100%', padding: '12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' };
 
 export default Registro;

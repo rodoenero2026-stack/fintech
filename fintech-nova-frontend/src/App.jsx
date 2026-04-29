@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom'; // Quitamos el Router de aquí
 import { obtenerDatosUsuario } from './simulatedApi';
 import { LayoutDashboard, Users, Bell, Search } from 'lucide-react';
 
@@ -29,7 +29,7 @@ const navBtnStyle = (active) => ({
 
 const AdminPanel = () => {
   const [vistaActual, setVistaActual] = useState('dashboard');
-  const [userFrein, setUserFrein] = useState(null); // Empezamos en null para evitar errores
+  const [userFrein, setUserFrein] = useState(null);
 
   useEffect(() => {
     const cargarDatos = () => {
@@ -42,7 +42,6 @@ const AdminPanel = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Si no hay datos, mostramos un estado de carga en lugar de una pantalla en blanco
   if (!userFrein) return <div style={{ padding: '20px' }}>Cargando Panel de Administración...</div>;
 
   return (
@@ -91,23 +90,15 @@ const AdminPanel = () => {
 
 export default function App() {
   return (
-    <Router>
       <Routes>
-        {/* Redirige la raíz al login o cárgalo directamente */}
         <Route path="/" element={<Login />} />
-        
-        {/* AGREGA ESTA LÍNEA: Ahora /login será una ruta válida */}
         <Route path="/login" element={<Login />} />
-        
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/solicitar" element={<LoanApplication />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/pagos" element={<Pagos />} />
         <Route path="/admin" element={<AdminPanel />} />
-
-        {/* Opcional: Redirigir cualquier ruta desconocida al login */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
   );
 }

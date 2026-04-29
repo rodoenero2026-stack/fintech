@@ -1,53 +1,72 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Login = () => {
-  const [credenciales, setCredenciales] = useState({ correo: '', password: '' });
+  const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
-  const manejarCambio = (e) => {
-    setCredenciales({ ...credenciales, [e.target.name]: e.target.value });
-  };
-
-  const iniciarSesion = async (e) => {
+  const handleSubmit = async (e) => { 
     e.preventDefault();
+
     try {
-      const respuesta = await fetch('http://localhost:3001/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credenciales),
+      const response = await axios.post('https://fintechnova-api.onrender.com/api/login', { 
+        email: correo, 
+        password: password 
       });
+      
+      const data = response.data; 
 
-      const data = await respuesta.json();
+      // Guardamos todo en el almacenamiento local
+      localStorage.setItem('userRole', 'user'); 
+      if (data.Token) localStorage.setItem('token', data.Token);
+      if (data.Usuario) localStorage.setItem('userName', data.Usuario);
 
-      if (respuesta.ok) {
-        // Guardamos los datos en localStorage para que el Dashboard te reconozca
-        localStorage.setItem('userRole', userRole);
-        alert("¡Bienvenido!");
-        window.location.href = '/dashboard'; 
-      } else {
-        alert("⚠️ " + data.message);
-      }
+      // --- INTENTO DE NAVEGACIÓN ---
+      console.log("Navegando a dashboard...");
+      
+      // Primero intentamos la forma elegante de React
+      navigate('/dashboard');
+
+      // Si en 1 segundo seguimos aquí, forzamos la entrada a la brava
+      setTimeout(() => {
+        if (window.location.pathname !== '/dashboard') {
+          window.location.href = '/dashboard';
+        }
+      }, 1000);
+      
     } catch (error) {
-      alert("❌ Error: Verifica que el servidor de Node esté encendido.");
+      alert("❌ Error: Revisa tus datos o la conexión.");
     }
   };
 
   return (
-    <div style={styles.container}>
-      <form onSubmit={iniciarSesion} style={styles.form}>
-        <h2 style={{ color: '#1a2b4b' }}>FintechNova Login</h2>
-        <input name="correo" type="email" placeholder="Correo" onChange={manejarCambio} required style={styles.input} />
-        <input name="password" type="password" placeholder="Contraseña" onChange={manejarCambio} required style={styles.input} />
-        <button type="submit" style={styles.button}>Entrar</button>
-      </form>
+    <div style={containerStyle}>
+      <div style={cardStyle}>
+        <h1 style={{ color: '#1e293b' }}>FintechNova API</h1>
+        <form onSubmit={handleSubmit}>
+          <div style={inputGroup}>
+            <label style={labelStyle}>Correo</label>
+            <input type="email" style={inputStyle} value={correo} onChange={(e) => setCorreo(e.target.value)} required />
+          </div>
+          <div style={inputGroup}>
+            <label style={labelStyle}>Contraseña</label>
+            <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </div>
+          <button type="submit" style={buttonStyle}>Entrar</button>
+        </form>
+      </div>
     </div>
   );
 };
 
-const styles = {
-  container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f4f7fe' },
-  form: { padding: '40px', backgroundColor: '#fff', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '15px', width: '350px' },
-  input: { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px' },
-  button: { padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#2563eb', color: 'white', fontSize: '16px', cursor: 'pointer' }
-};
+// Estilos (se mantienen igual que antes)
+const containerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f1f5f9' };
+const cardStyle = { background: 'white', padding: '40px', borderRadius: '16px', width: '350px', textAlign: 'center' };
+const inputGroup = { textAlign: 'left', marginBottom: '15px' };
+const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: '600' };
+const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' };
+const buttonStyle = { width: '100%', padding: '12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' };
 
 export default Login;
