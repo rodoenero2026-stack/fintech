@@ -20,10 +20,15 @@ const Login = () => {
       
       const data = response.data;
 
-if (data.token) localStorage.setItem('token', data.token);
-if (data.usuario) localStorage.setItem('userName', data.usuario);
-localStorage.setItem('userRole', 'user');
-      navigate('/dashboard');
+      if (data.token) localStorage.setItem('token', data.token);
+      if (data.usuario) localStorage.setItem('userName', data.usuario);
+      if (data.rol) localStorage.setItem('userRole', data.rol);
+
+      if (data.rol === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
       
     } catch (error) {
       setError('❌ Correo o contraseña incorrectos.');
@@ -33,7 +38,7 @@ localStorage.setItem('userRole', 'user');
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
-        <h1 style={{ color: '#1e293b', marginBottom: '10px' }}>FintechNova A</h1>
+        <h1 style={{ color: '#1e293b', marginBottom: '10px' }}>FintechNova API</h1>
         <p style={{ color: '#64748b', marginBottom: '25px' }}>Inicia sesión con tu cuenta</p>
 
         {error && <p style={{ color: 'red', marginBottom: '15px' }}>{error}</p>}
