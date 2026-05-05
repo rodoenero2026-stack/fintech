@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom'; // Quitamos el Router de aquí
-import { obtenerDatosUsuario } from './simulatedApi';
-import { LayoutDashboard, Users, Bell, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Users } from 'lucide-react';
 
 // Importación de páginas
 import UserDashboard from './pages/UserDashboard';
@@ -29,56 +28,37 @@ const navBtnStyle = (active) => ({
 
 const AdminPanel = () => {
   const [vistaActual, setVistaActual] = useState('dashboard');
-  const [userFrein, setUserFrein] = useState(null);
+  const navigate = useNavigate();
+  const userName = localStorage.getItem('userName') || 'Admin';
 
-  useEffect(() => {
-    const cargarDatos = () => {
-      const datos = obtenerDatosUsuario();
-      if (datos) setUserFrein(datos);
-    };
-    
-    cargarDatos();
-    const interval = setInterval(cargarDatos, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (!userFrein) return <div style={{ padding: '20px' }}>Cargando Panel de Administración...</div>;
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
       <aside style={{ width: '260px', background: '#1e293b', color: 'white', padding: '20px' }}>
-        <h2 style={{ fontSize: '1.2rem', marginBottom: '30px' }}>FintechNova Admin</h2>
+        <h2 style={{ fontSize: '1.2rem', marginBottom: '10px' }}>FintechNova Admin</h2>
+        <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '30px' }}>{userName}</p>
         <nav>
           <button onClick={() => setVistaActual('dashboard')} style={navBtnStyle(vistaActual === 'dashboard')}>
             <LayoutDashboard size={20} /> Dashboard
           </button>
           <button onClick={() => setVistaActual('usuarios')} style={navBtnStyle(vistaActual === 'usuarios')}>
-            <Users size={20} /> Gestión Usuarios
+            <Users size={20} /> Gestión
+          </button>
+          <button onClick={handleLogout} style={{ ...navBtnStyle(false), marginTop: '20px', color: '#ef4444' }}>
+            Cerrar Sesión
           </button>
         </nav>
       </aside>
 
       <main style={{ flex: 1, padding: '30px' }}>
-        <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
-          <div style={{ background: 'white', padding: '10px', borderRadius: '8px', width: '300px', display: 'flex', alignItems: 'center' }}>
-            <Search size={18} color="#64748b" />
-            <input type="text" placeholder="Buscar..." style={{ border: 'none', marginLeft: '10px', outline: 'none' }} />
-          </div>
-          <Bell size={24} color={userFrein.statusSolicitud === 'pendiente' ? 'red' : '#64748b'} />
-        </header>
-
         {vistaActual === 'dashboard' ? (
           <div>
-            {userFrein.statusSolicitud === 'pendiente' && (
-              <div style={{ background: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong>🔔 Nueva solicitud pendiente</strong>
-                  <p style={{ margin: 0, fontSize: '0.9rem' }}>{userFrein.nombre} pide ${userFrein.montoSolicitado || 0}</p>
-                </div>
-                <button onClick={() => setVistaActual('usuarios')} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}>Revisar</button>
-              </div>
-            )}
             <h1>Resumen General</h1>
+            <p style={{ color: '#64748b' }}>Selecciona "Gestión" para ver usuarios, solicitudes y préstamos.</p>
           </div>
         ) : (
           <Usuarios />
@@ -90,15 +70,15 @@ const AdminPanel = () => {
 
 export default function App() {
   return (
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/solicitar" element={<LoanApplication />} />
-        <Route path="/registro" element={<Registro />} />
-        <Route path="/pagos" element={<Pagos />} />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/dashboard" element={<UserDashboard />} />
+      <Route path="/solicitar" element={<LoanApplication />} />
+      <Route path="/registro" element={<Registro />} />
+      <Route path="/pagos" element={<Pagos />} />
+      <Route path="/admin" element={<AdminPanel />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
