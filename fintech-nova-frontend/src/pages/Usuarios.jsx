@@ -10,7 +10,6 @@ const Usuarios = () => {
   const [verDetalles, setVerDetalles] = useState(null);
   const [vistaTab, setVistaTab] = useState('solicitudes');
   const token = localStorage.getItem('token');
-
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
@@ -32,11 +31,11 @@ const Usuarios = () => {
 
   const manejarDecision = async (idSolicitud, estado) => {
     try {
-      await axios.put(`${API}/api/solicitudes/${idSolicitud}/estado`, 
-        { estado }, 
+      await axios.put(`${API}/api/solicitudes/${idSolicitud}/estado`,
+        { estado },
         { headers }
       );
-      alert(estado === 'APROBADA' ? '✅ Solicitud Aprobada' : '❌ Solicitud Rechazada');
+      alert(estado === 'PROCESADA' ? '✅ Solicitud Procesada' : '❌ Solicitud Rechazada');
       cargarDatos();
     } catch (err) {
       alert('Error al procesar la decisión');
@@ -49,20 +48,20 @@ const Usuarios = () => {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button 
-          onClick={() => setVistaTab('solicitudes')} 
+        <button
+          onClick={() => setVistaTab('solicitudes')}
           style={{ ...tabStyle, background: vistaTab === 'solicitudes' ? '#2563eb' : 'white', color: vistaTab === 'solicitudes' ? 'white' : '#64748b' }}
         >
           Solicitudes de Préstamo
         </button>
-        <button 
-          onClick={() => setVistaTab('usuarios')} 
+        <button
+          onClick={() => setVistaTab('usuarios')}
           style={{ ...tabStyle, background: vistaTab === 'usuarios' ? '#2563eb' : 'white', color: vistaTab === 'usuarios' ? 'white' : '#64748b' }}
         >
           Usuarios Registrados
         </button>
-        <button 
-          onClick={() => setVistaTab('prestamos')} 
+        <button
+          onClick={() => setVistaTab('prestamos')}
           style={{ ...tabStyle, background: vistaTab === 'prestamos' ? '#2563eb' : 'white', color: vistaTab === 'prestamos' ? 'white' : '#64748b' }}
         >
           Préstamos Activos
@@ -74,7 +73,7 @@ const Usuarios = () => {
         <div style={styles.cardContainer}>
           <table style={styles.table}>
             <thead>
-              <tr style={styles.headerRow}>
+              <tr>
                 <th style={styles.th}>SOLICITANTE</th>
                 <th style={styles.th}>MONTO</th>
                 <th style={styles.th}>PLAZO</th>
@@ -92,7 +91,7 @@ const Usuarios = () => {
                 </tr>
               ) : (
                 solicitudes.map(s => (
-                  <tr key={s.idSolicitud} style={styles.tr}>
+                  <tr key={s.idSolicitud}>
                     <td style={styles.td}>
                       <div style={{ fontWeight: '700', color: '#1e293b' }}>{s.nombre}</div>
                       <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ID: {s.idUsuario}</div>
@@ -108,10 +107,10 @@ const Usuarios = () => {
                       </button>
                     </td>
                     <td style={styles.td}>
-                      {s.estado === 'PENDIENTE' || s.estado === 'APROBADA' ? (
+                      {s.estado !== 'PROCESADA' && s.estado !== 'RECHAZADA' ? (
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => manejarDecision(s.idSolicitud, 'APROBADA')} style={styles.approveBtn}>
-                            <Check size={16} /> Aprobar
+                          <button onClick={() => manejarDecision(s.idSolicitud, 'PROCESADA')} style={styles.approveBtn}>
+                            <Check size={16} /> Procesar
                           </button>
                           <button onClick={() => manejarDecision(s.idSolicitud, 'RECHAZADA')} style={styles.rejectBtn}>
                             <X size={16} /> Rechazar
@@ -134,7 +133,7 @@ const Usuarios = () => {
         <div style={styles.cardContainer}>
           <table style={styles.table}>
             <thead>
-              <tr style={styles.headerRow}>
+              <tr>
                 <th style={styles.th}>ID</th>
                 <th style={styles.th}>NOMBRE</th>
                 <th style={styles.th}>EMAIL</th>
@@ -150,12 +149,12 @@ const Usuarios = () => {
                 </tr>
               ) : (
                 usuarios.map(u => (
-                  <tr key={u.idUsuario} style={styles.tr}>
+                  <tr key={u.idUsuario}>
                     <td style={styles.td}>{u.idUsuario}</td>
                     <td style={{ ...styles.td, fontWeight: '700' }}>{u.nombre}</td>
                     <td style={styles.td}>{u.email}</td>
                     <td style={styles.td}>
-                      <span style={badgeStyle(u.rol === 'admin' ? 'APROBADA' : 'PENDIENTE')}>
+                      <span style={badgeStyle(u.rol === 'admin' ? 'PROCESADA' : 'PENDIENTE')}>
                         {u.rol.toUpperCase()}
                       </span>
                     </td>
@@ -181,15 +180,15 @@ const Usuarios = () => {
               <button onClick={() => setVerDetalles(null)} style={styles.closeBtn}>&times;</button>
             </div>
             <div style={styles.modalBody}>
-              <DetailSection title="Identidad Legal" icon={<User size={18}/>}>
+              <DetailSection title="Identidad Legal" icon={<User size={18} />}>
                 <p><strong>CURP:</strong> {verDetalles.curp || 'No proporcionada'}</p>
                 <p><strong>INE:</strong> {verDetalles.ine || 'No proporcionada'}</p>
               </DetailSection>
-              <DetailSection title="Crédito Solicitado" icon={<DollarSign size={18}/>}>
+              <DetailSection title="Crédito Solicitado" icon={<DollarSign size={18} />}>
                 <p><strong>Monto:</strong> ${Number(verDetalles.montoSolicitado).toLocaleString()}</p>
                 <p><strong>Plazo:</strong> {verDetalles.plazoMeses} meses</p>
               </DetailSection>
-              <DetailSection title="Documentación" icon={<FileText size={18}/>}>
+              <DetailSection title="Documentación" icon={<FileText size={18} />}>
                 <p><strong>Recibo luz/agua:</strong> {verDetalles.reciboLuzAgua || 'No proporcionado'}</p>
                 <p><strong>Comprobante ingresos:</strong> {verDetalles.comprobanteIngresos || 'No proporcionado'}</p>
                 <p><strong>Estado de cuenta:</strong> {verDetalles.estadoCuenta || 'No proporcionado'}</p>
@@ -218,7 +217,7 @@ const PrestamosTab = ({ headers }) => {
     <div style={styles.cardContainer}>
       <table style={styles.table}>
         <thead>
-          <tr style={styles.headerRow}>
+          <tr>
             <th style={styles.th}>ID PRÉSTAMO</th>
             <th style={styles.th}>ID USUARIO</th>
             <th style={styles.th}>MONTO APROBADO</th>
@@ -234,7 +233,7 @@ const PrestamosTab = ({ headers }) => {
             </tr>
           ) : (
             prestamos.map(p => (
-              <tr key={p.idPrestamo} style={styles.tr}>
+              <tr key={p.idPrestamo}>
                 <td style={styles.td}>{p.idPrestamo}</td>
                 <td style={styles.td}>{p.idUsuario}</td>
                 <td style={{ ...styles.td, fontWeight: '700' }}>${Number(p.montoAprobado).toLocaleString()}</td>
@@ -259,32 +258,16 @@ const DetailSection = ({ title, icon, children }) => (
   </div>
 );
 
-const tabStyle = { padding: '10px 20px', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' };
+const tabStyle = {
+  padding: '10px 20px',
+  border: '1px solid #e2e8f0',
+  borderRadius: '10px',
+  cursor: 'pointer',
+  fontWeight: '600'
+};
 
 const styles = {
   cardContainer: { background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  headerRow: {},
   th: { padding: '18px 24px', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: '700', borderBottom: '1px solid #e2e8f0' },
-  td: { padding: '16px 24px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' },
-  tr: {},
-  viewBtn: { display: 'flex', alignItems: 'center', gap: '6px', background: '#fff', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: '10px', cursor: 'pointer', color: '#475569', fontWeight: '600' },
-  approveBtn: { display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700' },
-  rejectBtn: { display: 'flex', alignItems: 'center', gap: '6px', background: '#fff', color: '#ef4444', border: '1px solid #fee2e2', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700' },
-  modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-  modal: { background: 'white', width: '90%', maxWidth: '550px', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflowY: 'auto', maxHeight: '90vh' },
-  modalHeader: { padding: '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  closeBtn: { background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' },
-  modalBody: { padding: '24px' },
-  modalFooter: { padding: '20px', background: '#f8fafc', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', textAlign: 'right' },
-  modalCloseBtn: { background: '#1e293b', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }
-};
-
-const badgeStyle = (status) => ({
-  padding: '6px 14px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800',
-  background: status === 'APROBADA' ? '#dcfce7' : status === 'RECHAZADA' ? '#fef2f2' : '#eff6ff',
-  color: status === 'APROBADA' ? '#166534' : status === 'RECHAZADA' ? '#991b1b' : '#2563eb',
-  border: `1px solid ${status === 'APROBADA' ? '#bbf7d0' : status === 'RECHAZADA' ? '#fecaca' : '#bfdbfe'}`
-});
-
-export default Usuarios;
+  td: { padding: '16p
