@@ -270,4 +270,24 @@ const styles = {
   cardContainer: { background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { padding: '18px 24px', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: '700', borderBottom: '1px solid #e2e8f0' },
-  td: { padding: '16p
+  td: { padding: '16px 24px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' },
+  viewBtn: { display: 'flex', alignItems: 'center', gap: '6px', background: '#fff', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: '10px', cursor: 'pointer', color: '#475569', fontWeight: '600' },
+  approveBtn: { display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700' },
+  rejectBtn: { display: 'flex', alignItems: 'center', gap: '6px', background: '#fff', color: '#ef4444', border: '1px solid #fee2e2', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+  modal: { background: 'white', width: '90%', maxWidth: '550px', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflowY: 'auto', maxHeight: '90vh' },
+  modalHeader: { padding: '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  closeBtn: { background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' },
+  modalBody: { padding: '24px' },
+  modalFooter: { padding: '20px', background: '#f8fafc', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', textAlign: 'right' },
+  modalCloseBtn: { background: '#1e293b', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }
+};
+
+const badgeStyle = (status) => ({
+  padding: '6px 14px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800',
+  background: status === 'PROCESADA' ? '#dcfce7' : status === 'RECHAZADA' ? '#fef2f2' : '#eff6ff',
+  color: status === 'PROCESADA' ? '#166534' : status === 'RECHAZADA' ? '#991b1b' : '#2563eb',
+  border: `1px solid ${status === 'PROCESADA' ? '#bbf7d0' : status === 'RECHAZADA' ? '#fecaca' : '#bfdbfe'}`
+});
+
+export default Usuarios;
