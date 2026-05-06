@@ -1,97 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { obtenerDatosUsuario } from '../simulatedApi'; 
-import { 
-  Calendar, DollarSign, Clock, AlertCircle, CheckCircle2, 
-  History, CreditCard, PlusCircle, ArrowRight, X, Info, LogOut 
+import axios from 'axios';
+import {
+  Clock, AlertCircle, CheckCircle2,
+  History, CreditCard, PlusCircle, ArrowRight, X, Info, LogOut
 } from 'lucide-react';
 
+const API = 'https://fintechnova-api.onrender.com';
+
 export default function UserDashboard() {
-  const [prestamo, setPrestamo] = useState(null);
-  const [showCalendar, setShowCalendar] = useState(false); 
+  const [prestamos, setPrestamos] = useState([]);
+  const [transacciones, setTransacciones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
 
-  const cargarInformacion = () => {
-    const datos = obtenerDatosUsuario();
-    setPrestamo(datos);
-  };
+  const userName = localStorage.getItem('userName') || 'Usuario';
+  const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
+  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
-    // CORREGIDO: usar 'token' en lugar de 'usuario'
-    const user = localStorage.getItem('token');
-    if (!user) {
+    if (!token) {
       navigate('/login');
       return;
     }
+    cargarDatos();
+  }, []);
 
-    cargarInformacion();
-    
-    window.addEventListener('storage', cargarInformacion);
-    const interval = setInterval(cargarInformacion, 1000);
-
-    return () => {
-      window.removeEventListener('storage', cargarInformacion);
-      clearInterval(interval);
-    };
-  }, [navigate]);
+  const cargarDatos = async () => {
+    try {
+      const [resPrestamos, resTransacciones] = await Promise.all([
+        axios.get(`${API}/api/prestamos/usuario/${userId}`, { headers }),
+        axios.get(`${API}/api/transacciones/usuario/${userId}`, { headers })
+      ]);
+      setPrestamos(resPrestamos.data);
+      setTransacciones(resTransacciones.data);
+    } catch (err) {
+      console.error("Error cargando datos:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
   };
 
-  const montoBase = Number(prestamo?.montoSolicitado || 0);
-  const meses = Number(prestamo?.meses || 1);
-  const montoPagado = Number(prestamo?.montoPagado || 0);
-  
-  const calcularTasa = (m) => {
-    if (m <= 3) return 0.05;
-    if (m <= 6) return 0.12;
-    if (m <= 12) return 0.25;
-    return 0.40;
-  };
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <p>Cargando tu información...</p>
+    </div>
+  );
 
-  const totalConInteres = montoBase * (1 + calcularTasa(meses));
-  const restante = totalConInteres - montoPagado;
-  const porcentajeProgreso = totalConInteres > 0 ? Math.min((montoPagado / totalConInteres) * 100, 100) : 0;
-
-  const userName = localStorage.getItem('userName') || 'Usuario';
-
-  const RenderHistorial = () => {
-    const movimientos = prestamo?.historial || [];
-    if (movimientos.length === 0) return null;
-
-    return (
-      <div style={{ marginTop: '40px' }}>
-        <h3 style={styles.sectionTitle}><History size={20} /> Historial de Movimientos</h3>
-        <div style={styles.historyCard}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Concepto</th>
-                <th style={styles.th}>Fecha</th>
-                <th style={styles.th}>Monto</th>
-                <th style={styles.th}>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movimientos.map((mov, idx) => (
-                <tr key={idx} style={styles.tr}>
-                  <td style={styles.td}>{mov.concepto}</td>
-                  <td style={styles.td}>{mov.fecha}</td>
-                  <td style={styles.td}>${Number(mov.monto).toLocaleString()}</td>
-                  <td style={styles.td}>
-                    <span style={styles.statusBadge}>Completado</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
+  const prestamo = prestamos[0] || null;
+  const montoAprobado = Number(prestamo?.montoAprobado || 0);
+  const saldoPendiente = Number(prestamo?.saldoPendiente || 0);
+  const porcentajeProgreso = montoAprobado > 0 ? Math.min(((montoAprobado - saldoPendiente) / montoAprobado) * 100, 100) : 0;
 
   return (
     <div style={styles.container}>
@@ -100,15 +67,11 @@ export default function UserDashboard() {
           <h1 style={styles.brand}>FintechNova</h1>
           <p style={styles.welcome}>Bienvenido, {userName}</p>
         </div>
-        
+
         <div style={{ position: 'relative' }}>
-          <div 
-            style={styles.avatar} 
-            onClick={() => setShowUserMenu(!showUserMenu)}
-          >
+          <div style={styles.avatar} onClick={() => setShowUserMenu(!showUserMenu)}>
             {userName.charAt(0).toUpperCase()}
           </div>
-          
           {showUserMenu && (
             <div style={styles.userMenu}>
               <button style={styles.logoutBtn} onClick={handleLogout}>
@@ -119,34 +82,22 @@ export default function UserDashboard() {
         </div>
       </header>
 
-      {(!prestamo || prestamo.statusSolicitud === 'ninguna' || restante <= 0) && (
+      {/* SIN PRÉSTAMOS */}
+      {!prestamo && (
         <div style={styles.emptyState}>
           <div style={styles.illustrationCircle}>
             <PlusCircle size={40} color="#2563eb" />
           </div>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '10px' }}>¡Bienvenido, {userName}!</h2>
-          <p style={{ marginBottom: '25px', color: '#64748b' }}>No tienes préstamos pendientes en este momento.</p>
+          <p style={{ marginBottom: '25px', color: '#64748b' }}>No tienes préstamos activos en este momento.</p>
           <button onClick={() => navigate('/solicitar')} style={styles.ctaButton}>
             Solicitar un nuevo préstamo <ArrowRight size={18} />
           </button>
         </div>
       )}
 
-      {prestamo?.statusSolicitud === 'pendiente' && (
-        <>
-          <div style={{ ...styles.statusAlert, background: '#eff6ff', color: '#1e40af' }}>
-            <Clock size={20} />
-            <div><strong>Solicitud en Revisión:</strong> Estamos validando tu información personal.</div>
-          </div>
-          <div style={styles.emptyState}>
-            <div style={styles.illustrationCircle}><Clock size={48} color="#2563eb" /></div>
-            <h3>Analizando tu perfil</h3>
-            <p>Hola <strong>{userName}</strong>, tu solicitud de <strong>${montoBase.toLocaleString()}</strong> está en proceso.</p>
-          </div>
-        </>
-      )}
-
-      {prestamo?.statusSolicitud === 'aprobado' && restante > 0 && (
+      {/* PRÉSTAMO ACTIVO */}
+      {prestamo && (
         <>
           <div style={styles.alertWarning}>
             <AlertCircle size={20} />
@@ -154,35 +105,93 @@ export default function UserDashboard() {
           </div>
 
           <div style={styles.mainGrid}>
+            {/* CARD PRÉSTAMO */}
             <div style={styles.loanCard}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div style={styles.badgeSuccess}><CheckCircle2 size={14} /> CRÉDITO ACTIVO</div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>DEUDA TOTAL</span>
-                  <p style={{ margin: 0, fontWeight: 'bold' }}>${totalConInteres.toLocaleString()}</p>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>MONTO APROBADO</span>
+                  <p style={{ margin: 0, fontWeight: 'bold' }}>${montoAprobado.toLocaleString()}</p>
                 </div>
               </div>
-              <h2 style={styles.montoPrincipal}>${restante.toLocaleString()}</h2>
+              <h2 style={styles.montoPrincipal}>${saldoPendiente.toLocaleString()}</h2>
               <p style={styles.subText}>Saldo pendiente por pagar</p>
               <div style={styles.progressContainer}>
                 <div style={{ ...styles.progressBar, width: `${porcentajeProgreso}%` }}></div>
               </div>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '8px' }}>
+                {porcentajeProgreso.toFixed(0)}% pagado
+              </p>
             </div>
 
+            {/* CARD ACCIONES */}
             <div style={styles.actionCard}>
               <div style={styles.iconCircle}><CreditCard size={20} color="#2563eb" /></div>
               <h3>Gestión de Pagos</h3>
               <div style={styles.buttonGroup}>
-                <button onClick={() => navigate('/pagos')} style={styles.primaryBtn}>Pagar Mensualidad</button>
-                <button onClick={() => setShowCalendar(true)} style={styles.secondaryBtn}>Ver Calendario</button>
+                <button onClick={() => navigate('/pagos')} style={styles.primaryBtn}>
+                  Pagar Mensualidad
+                </button>
+                <button onClick={() => setShowCalendar(true)} style={styles.secondaryBtn}>
+                  Ver Calendario
+                </button>
+                <button onClick={() => navigate('/solicitar')} style={styles.secondaryBtn}>
+                  Nuevo Préstamo
+                </button>
               </div>
+            </div>
+          </div>
+
+          {/* RESUMEN */}
+          <div style={styles.summaryGrid}>
+            <div style={styles.summaryCard}>
+              <p style={styles.summaryLabel}>Tasa de Interés</p>
+              <p style={styles.summaryValue}>{Number(prestamo.tasaInteres).toFixed(1)}%</p>
+            </div>
+            <div style={styles.summaryCard}>
+              <p style={styles.summaryLabel}>Préstamos Activos</p>
+              <p style={styles.summaryValue}>{prestamos.length}</p>
+            </div>
+            <div style={styles.summaryCard}>
+              <p style={styles.summaryLabel}>Transacciones</p>
+              <p style={styles.summaryValue}>{transacciones.length}</p>
             </div>
           </div>
         </>
       )}
 
-      <RenderHistorial />
+      {/* HISTORIAL DE TRANSACCIONES */}
+      {transacciones.length > 0 && (
+        <div style={{ marginTop: '40px' }}>
+          <h3 style={styles.sectionTitle}><History size={20} /> Historial de Movimientos</h3>
+          <div style={styles.historyCard}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Concepto</th>
+                  <th style={styles.th}>Fecha</th>
+                  <th style={styles.th}>Monto</th>
+                  <th style={styles.th}>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transacciones.map((t) => (
+                  <tr key={t.idTransaccion}>
+                    <td style={styles.td}>{t.tipoTransaccion}</td>
+                    <td style={styles.td}>{t.fecha}</td>
+                    <td style={styles.td}>${Number(t.monto).toLocaleString()}</td>
+                    <td style={styles.td}>
+                      <span style={styles.statusBadge}>{t.estado}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
+      {/* CALENDARIO */}
       {showCalendar && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
@@ -220,9 +229,12 @@ const styles = {
   avatar: { width: '40px', height: '40px', background: '#2563eb', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', cursor: 'pointer' },
   userMenu: { position: 'absolute', top: '50px', right: '0', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '8px', zIndex: 100, width: '150px' },
   logoutBtn: { width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontWeight: '600', borderRadius: '8px' },
-  statusAlert: { display: 'flex', alignItems: 'center', gap: '15px', padding: '20px', borderRadius: '16px', marginBottom: '20px', fontSize: '0.95rem' },
   alertWarning: { display: 'flex', alignItems: 'center', gap: '15px', background: '#fff7ed', color: '#9a3412', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px', marginBottom: '20px' },
-  mainGrid: { display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '20px', marginBottom: '30px' },
+  mainGrid: { display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '20px', marginBottom: '20px' },
+  summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '20px' },
+  summaryCard: { background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'center' },
+  summaryLabel: { margin: 0, color: '#64748b', fontSize: '0.8rem', fontWeight: '600' },
+  summaryValue: { margin: '8px 0 0 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' },
   loanCard: { background: 'white', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
   badgeSuccess: { display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f0fdf4', color: '#166534', padding: '6px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '15px' },
   montoPrincipal: { fontSize: '3.5rem', margin: '0 0 5px 0', letterSpacing: '-2px', fontWeight: '800' },
