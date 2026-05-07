@@ -35,6 +35,7 @@ export default function UserDashboard() {
         axios.get(`${API}/api/prestamos/usuario/${userId}`, { headers }),
         axios.get(`${API}/api/transacciones/usuario/${userId}`, { headers })
       ]);
+      console.log("BBBBBBBBBBBBBBBBBBB: ", resPrestamos);
       setPrestamos(resPrestamos.data);
       setTransacciones(resTransacciones.data);
     } catch (err) {

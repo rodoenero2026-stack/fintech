@@ -17,10 +17,10 @@ const Login = () => {
         email: correo, 
         password: password 
       });
-      
-      const data = response.data;
-
+      console.log("AAAAAAAA2: ", response.data);
+      const data = response.data; 
       if (data.token) localStorage.setItem('token', data.token);
+      if (data.token) localStorage.setItem('userId', data.idUsuario);
       if (data.usuario) localStorage.setItem('userName', data.usuario);
       if (data.rol) localStorage.setItem('userRole', data.rol);
 

@@ -7,18 +7,18 @@ const datosIniciales = {
       { id: 1, nombre: "Alejandro R.", email: "ale@fintech.com", kyc: "Verificado", monto: 5000 },
       { id: 2, nombre: "Admin Nova", email: "admin@nova.com", kyc: "Pendiente", monto: 3500 }
     ],
-    historialGlobal: [] 
+    historialGlobal: []
   },
   usuarioFrein: {
     nombre: "Joan Francisco",
-    estaAprobado: false, 
-    statusSolicitud: "ninguna", 
+    estaAprobado: false,
+    statusSolicitud: "ninguna",
     montoSolicitado: 0,
     montoPagado: 0,
     proximoPago: null,
     diaPago: 15,
-    historial: [], 
-    historialPrestamos: [] 
+    historial: [],
+    historialPrestamos: []
   }
 };
 
@@ -46,16 +46,48 @@ export const obtenerDatosAdmin = () => {
   return db.admin || datosIniciales.admin;
 };
 
-export const solicitarPrestamoApi = (datos) => {
-  return new Promise((resolve) => {
-    const db = leerDB();
-    db.usuarioFrein = { ...db.usuarioFrein, ...datos };
-    guardarDB(db);
-    window.dispatchEvent(new Event('storage'));
-    resolve({ success: true });
-  });
+//HECHO
+export const solicitarPrestamoApi = async (datos) => {
+  // 1. Recuperamos el Token y el ID del usuario que guardamos en el Login
+  const token = localStorage.getItem('token');
+  const idUsuario = localStorage.getItem('userId') || 1; // Ajusta según cómo guardes el ID
+
+  try {
+    const respuesta = await fetch("https://fintechnova-api.onrender.com/api/prestamos/simular", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // 2. Pasamos la "llave" para que C# nos deje entrar
+        'Authorization': `Bearer ${token}`
+      },
+      // 3. Mapeamos los nombres del front a los nombres que espera tu DTO en C#
+      body: JSON.stringify({
+        IdUsuario: parseInt(idUsuario),
+        Monto: parseFloat(datos.monto),
+        Meses: parseInt(datos.plazo || datos.meses),
+        CURP: datos.curp || "",
+        INE: datos.ine || "",
+        ReciboLuzAgua: datos.reciboLuzAgua || "",
+        ComprobanteIngresos: datos.comprobanteIngresos || "",
+        EstadoCuenta: datos.estadoCuenta || ""
+      })
+    });
+
+    if (respuesta.ok) {
+      const resultado = await respuesta.json();
+      return { success: true, data: resultado };
+    } else {
+      const errorTexto = await respuesta.text();
+      console.error("Error del servidor:", errorTexto);
+      return { success: false, error: errorTexto };
+    }
+  } catch (error) {
+    console.error("Error de red:", error);
+    return { success: false, error: "No se pudo conectar con el servidor" };
+  }
 };
 
+//TODO: Implementar función para aprobar/rechazar préstamos desde el Admin
 export const decidirPrestamo = (decision) => {
   const db = leerDB();
   if (decision === 'aprobar') {
@@ -72,16 +104,17 @@ export const decidirPrestamo = (decision) => {
   } else if (decision === 'rechazar') {
     db.usuarioFrein.statusSolicitud = "rechazado";
     db.usuarioFrein.estaAprobado = false;
-  } 
+  }
   guardarDB(db);
   window.dispatchEvent(new Event('storage'));
 };
 
+//TODO: Implementar función para registrar pagos desde el UserDashboard
 export const registrarPagoApi = (tipo, monto) => {
   try {
     const db = leerDB();
     const montoNum = Number(monto);
-    
+
     if (!db.usuarioFrein) db.usuarioFrein = { ...datosIniciales.usuarioFrein };
 
     const nuevoMovimiento = {

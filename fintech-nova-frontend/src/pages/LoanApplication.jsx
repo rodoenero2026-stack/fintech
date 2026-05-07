@@ -57,15 +57,17 @@ export default function LoanApplication() {
     };
 
     try {
-      await solicitarPrestamoApi(solicitudFinal);
-      
+      res = await solicitarPrestamoApi(solicitudFinal);
+      if(res.statusSolicitud != 200){
+        alert("¡Solicitud fallida!");
+      }
       // Sincronización manual por si la API falla en disparar el evento
       localStorage.setItem('fintech_nova_v1', JSON.stringify(solicitudFinal));
       window.dispatchEvent(new Event('storage'));
       
       setTimeout(() => {
         setLoading(false);
-        navigate('/dashboard');
+        navigate('/prestamos/detalles/' + res.id); // Redirige al detalle del préstamo (ajusta la ruta según tu configuración)
       }, 1000);
     } catch (error) {
       console.error("Error en API:", error);
