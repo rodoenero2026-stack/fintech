@@ -1,35 +1,38 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { solicitarPrestamoApi } from '../simulatedApi';
-import { ArrowLeft, ArrowRight, Upload, CheckCircle2 } from 'lucide-react';
+import axios from 'axios';
+import { ArrowLeft, ArrowRight, Upload, Clock, CheckCircle2 } from 'lucide-react';
+
+const API = 'https://fintechnova-api.onrender.com';
 
 export default function LoanApplication() {
   const navigate = useNavigate();
-  const [paso, setPaso] = useState(1);
+  const [paso, setPaso] = useState(1); // 1=config, 2=datos, 3=esperando
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Estado del formulario
+  const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
+  const userName = localStorage.getItem('userName') || 'Usuario';
+  const headers = { Authorization: `Bearer ${token}` };
+
   const [formData, setFormData] = useState({
     monto: 1000,
     meses: 3,
-    direccion: '',
-    numeroCasa: '',
-    codigoPostal: '', 
-    estado: '',
-    celular: '',
-    curp: '',          
-    ingresos: '',
-    diaPago: 1, // Valor por defecto
-    fotoIne: null
+    curp: '',
+    ine: '',
+    reciboLuzAgua: '',
+    comprobanteIngresos: '',
+    estadoCuenta: '',
+    diaPago: 1
   });
 
-  // Cálculos de intereses
   const calcularInteres = (meses) => {
     const m = Number(meses);
-    if (m === 3) return 0.05; 
-    if (m === 6) return 0.12; 
-    if (m === 12) return 0.25; 
-    return 0.40; 
+    if (m === 3) return 0.05;
+    if (m === 6) return 0.12;
+    if (m === 12) return 0.25;
+    return 0.40;
   };
 
   const interesActual = calcularInteres(formData.meses);
@@ -41,39 +44,77 @@ export default function LoanApplication() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Función para finalizar corregida para sincronizar con el Dashboard
- const finalizarSolicitud = async () => {
+  const finalizarSolicitud = async () => {
     setLoading(true);
-    
-    const solicitudFinal = {
-      ...formData,
-      nombre: "Joan Francisco", 
-      // IMPORTANTE: Mapeamos 'monto' a 'montoSolicitado' para que el Dashboard lo reconozca
-      montoSolicitado: formData.monto, 
-      statusSolicitud: 'pendiente', // Usar 'statusSolicitud' en lugar de solo 'status'
-      fechaSolicitud: new Date().toISOString(),
-      montoPagado: 0,
-      historial: []
-    };
-
+    setError('');
     try {
-      res = await solicitarPrestamoApi(solicitudFinal);
-      if(res.statusSolicitud != 200){
-        alert("¡Solicitud fallida!");
-      }
-      // Sincronización manual por si la API falla en disparar el evento
-      localStorage.setItem('fintech_nova_v1', JSON.stringify(solicitudFinal));
-      window.dispatchEvent(new Event('storage'));
-      
-      setTimeout(() => {
-        setLoading(false);
-        navigate('/prestamos/detalles/' + res.id); // Redirige al detalle del préstamo (ajusta la ruta según tu configuración)
-      }, 1000);
-    } catch (error) {
-      console.error("Error en API:", error);
+      await axios.post(`${API}/api/prestamos/simular`, {
+        idUsuario: Number(userId),
+        monto: Number(formData.monto),
+        meses: Number(formData.meses),
+        cURP: formData.curp,
+        iNE: formData.ine,
+        reciboLuzAgua: formData.reciboLuzAgua,
+        comprobanteIngresos: formData.comprobanteIngresos,
+        estadoCuenta: formData.estadoCuenta
+      }, { headers });
+
+      setPaso(3); // Ir a pantalla de espera
+    } catch (err) {
+      setError('❌ Error al enviar la solicitud. Intenta de nuevo.');
+    } finally {
       setLoading(false);
     }
   };
+
+  // PASO 3 — Pantalla de espera
+  if (paso === 3) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <div style={styles.waitingContainer}>
+            <div style={styles.clockCircle}>
+              <Clock size={48} color="#2563eb" />
+            </div>
+            <h2 style={styles.title}>¡Solicitud Enviada!</h2>
+            <p style={styles.subtitle}>
+              Hola <strong>{userName}</strong>, tu solicitud de <strong>${Number(formData.monto).toLocaleString()}</strong> está siendo revisada por nuestro equipo.
+            </p>
+
+            <div style={styles.stepsWaiting}>
+              <div style={styles.stepWaiting}>
+                <CheckCircle2 size={20} color="#10b981" />
+                <span>Solicitud recibida</span>
+              </div>
+              <div style={styles.stepWaiting}>
+                <Clock size={20} color="#2563eb" />
+                <span style={{ color: '#2563eb', fontWeight: '600' }}>Revisión en proceso...</span>
+              </div>
+              <div style={{ ...styles.stepWaiting, opacity: 0.4 }}>
+                <Clock size={20} color="#94a3b8" />
+                <span>Préstamo aprobado</span>
+              </div>
+            </div>
+
+            <div style={styles.infoBox}>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e40af' }}>
+                ⏱ El proceso de aprobación puede tomar entre <strong>24 y 48 horas hábiles</strong>. Te notificaremos cuando haya una actualización.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button onClick={() => navigate('/dashboard')} style={styles.primaryBtn}>
+                Ver mi Dashboard
+              </button>
+              <button onClick={() => { setPaso(1); setFormData({ monto: 1000, meses: 3, curp: '', ine: '', reciboLuzAgua: '', comprobanteIngresos: '', estadoCuenta: '', diaPago: 1 }); }} style={styles.secondaryBtn}>
+                Nueva Solicitud
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -82,26 +123,30 @@ export default function LoanApplication() {
       </button>
 
       <div style={styles.card}>
-        {/* Indicador de Pasos */}
+        {/* Stepper */}
         <div style={styles.stepper}>
-          <div style={{...styles.step, color: paso >= 1 ? '#2563eb' : '#94a3b8'}}>1. Configuración</div>
-          <div style={{...styles.line, background: paso === 2 ? '#2563eb' : '#e2e8f0'}}></div>
-          <div style={{...styles.step, color: paso === 2 ? '#2563eb' : '#94a3b8'}}>2. Datos Personales</div>
+          <div style={{ ...styles.step, color: paso >= 1 ? '#2563eb' : '#94a3b8' }}>1. Configuración</div>
+          <div style={{ ...styles.line, background: paso === 2 ? '#2563eb' : '#e2e8f0' }}></div>
+          <div style={{ ...styles.step, color: paso === 2 ? '#2563eb' : '#94a3b8' }}>2. Documentos</div>
         </div>
 
-        {paso === 1 ? (
-          <div className="fade-in">
+        {error && <p style={{ color: 'red', marginBottom: '15px', textAlign: 'center' }}>{error}</p>}
+
+        {/* PASO 1 */}
+        {paso === 1 && (
+          <div>
             <h2 style={styles.title}>Configura tu préstamo</h2>
             <p style={styles.subtitle}>Elige el monto y el plazo que mejor se adapte a ti.</p>
 
             <div style={styles.inputGroup}>
               <label style={styles.label}>¿Cuánto dinero necesitas?</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 name="monto"
                 value={formData.monto}
                 onChange={manejarCambio}
                 style={styles.input}
+                min="500"
               />
             </div>
 
@@ -124,14 +169,11 @@ export default function LoanApplication() {
                     type="button"
                     onClick={() => setFormData({ ...formData, diaPago: dia })}
                     style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: '12px',
+                      flex: 1, padding: '12px', borderRadius: '12px',
                       border: formData.diaPago === dia ? '2px solid #2563eb' : '1px solid #e2e8f0',
                       background: formData.diaPago === dia ? '#eff6ff' : 'white',
                       color: formData.diaPago === dia ? '#2563eb' : '#64748b',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
+                      fontWeight: 'bold', cursor: 'pointer'
                     }}
                   >
                     Día {dia}
@@ -147,7 +189,7 @@ export default function LoanApplication() {
               </div>
               <div style={styles.summaryRow}>
                 <span>Cuota mensual:</span>
-                <strong style={{color: '#2563eb'}}>${cuotaMensual.toLocaleString(undefined, {maximumFractionDigits: 2})} / mes</strong>
+                <strong style={{ color: '#2563eb' }}>${cuotaMensual.toLocaleString(undefined, { maximumFractionDigits: 2 })} / mes</strong>
               </div>
             </div>
 
@@ -155,71 +197,45 @@ export default function LoanApplication() {
               Siguiente paso <ArrowRight size={18} />
             </button>
           </div>
-        ) : (
-          <div className="fade-in">
-            <h2 style={styles.title}>Información Personal</h2>
-            <p style={styles.subtitle}>Casi terminamos, completa tu perfil.</p>
-            
-            <div style={styles.grid}>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>CURP</label>
-                <input type="text" name="curp" onChange={manejarCambio} style={styles.input} placeholder="18 caracteres" maxLength={18} />
-              </div>
+        )}
 
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Código Postal</label>
-                <input type="number" name="codigoPostal" onChange={manejarCambio} style={styles.input} placeholder="C.P." />
-              </div>
+        {/* PASO 2 */}
+        {paso === 2 && (
+          <div>
+            <h2 style={styles.title}>Documentación</h2>
+            <p style={styles.subtitle}>Ingresa tu información y documentos requeridos.</p>
 
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Dirección</label>
-                <input type="text" name="direccion" onChange={manejarCambio} style={styles.input} placeholder="Calle y Colonia" />
-              </div>
-
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Núm. Casa</label>
-                <input type="text" name="numeroCasa" onChange={manejarCambio} style={styles.input} placeholder="Ej. 12" />
-              </div>
-
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Estado</label>
-                <input type="text" name="estado" onChange={manejarCambio} style={styles.input} placeholder="Ej. Chiapas" />
-              </div>
-
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Celular</label>
-                <input type="tel" name="celular" onChange={manejarCambio} style={styles.input} placeholder="10 dígitos" />
-              </div>
-
-              <div style={{ ...styles.inputGroup, gridColumn: 'span 2' }}>
-                <label style={styles.label}>Ingreso Mensual Libre (MXN)</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>$</span>
-                  <input 
-                    type="number" 
-                    name="ingresos" 
-                    onChange={manejarCambio} 
-                    style={{ ...styles.input, paddingLeft: '30px' }} 
-                    placeholder="Ej. 12000" 
-                  />
-                </div>
-              </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>CURP</label>
+              <input type="text" name="curp" value={formData.curp} onChange={manejarCambio} style={styles.input} placeholder="18 caracteres" maxLength={18} />
             </div>
 
-            <div style={{ marginTop: '20px' }}>
-              <label style={styles.label}>Identificación Oficial (INE)</label>
-              <div style={styles.dropzone}>
-                <Upload size={24} color="#94a3b8" />
-                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Sube tu identificación para validar</p>
-              </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>INE (número)</label>
+              <input type="text" name="ine" value={formData.ine} onChange={manejarCambio} style={styles.input} placeholder="Número de INE" />
             </div>
 
-            <button 
-              onClick={finalizarSolicitud} 
-              style={{...styles.nextBtn, background: '#059669', marginTop: '20px'}}
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Recibo de Luz/Agua</label>
+              <input type="text" name="reciboLuzAgua" value={formData.reciboLuzAgua} onChange={manejarCambio} style={styles.input} placeholder="Ej. CFE-2026-001" />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Comprobante de Ingresos</label>
+              <input type="text" name="comprobanteIngresos" value={formData.comprobanteIngresos} onChange={manejarCambio} style={styles.input} placeholder="Ej. Nómina-Marzo-2026" />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Estado de Cuenta</label>
+              <input type="text" name="estadoCuenta" value={formData.estadoCuenta} onChange={manejarCambio} style={styles.input} placeholder="Ej. Banamex-2026-Q1" />
+            </div>
+
+            <button
+              onClick={finalizarSolicitud}
+              style={{ ...styles.nextBtn, background: '#059669' }}
               disabled={loading}
             >
-              {loading ? 'Procesando...' : 'Finalizar Solicitud'}
+              {loading ? 'Enviando...' : 'Finalizar Solicitud'}
             </button>
           </div>
         )}
@@ -243,6 +259,11 @@ const styles = {
   summaryBox: { background: '#f8fafc', padding: '20px', borderRadius: '16px', marginBottom: '30px' },
   summaryRow: { display: 'flex', justifyContent: 'space-between', marginBottom: '10px' },
   nextBtn: { width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  dropzone: { border: '2px dashed #cbd5e1', padding: '20px', borderRadius: '16px', textAlign: 'center', cursor: 'pointer' }
+  waitingContainer: { textAlign: 'center', padding: '20px 0' },
+  clockCircle: { width: '90px', height: '90px', background: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' },
+  stepsWaiting: { display: 'flex', flexDirection: 'column', gap: '15px', margin: '30px auto', maxWidth: '280px', textAlign: 'left' },
+  stepWaiting: { display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.95rem', color: '#475569' },
+  infoBox: { background: '#eff6ff', padding: '16px', borderRadius: '12px', margin: '20px 0', textAlign: 'left' },
+  primaryBtn: { flex: 1, background: '#2563eb', color: 'white', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' },
+  secondaryBtn: { flex: 1, background: 'white', color: '#2563eb', border: '1.5px solid #e2e8f0', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
 };
